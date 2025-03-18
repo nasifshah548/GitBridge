@@ -5,6 +5,13 @@
 /.pnp
 .pnp.js
 
+# Ignore node_modules folder specifically in the backend folder
+backend/node_modules/
+
+# Do not ignore package.json and package-lock.json
+!package.json
+!package-lock.json
+
 # testing
 /coverage
 
