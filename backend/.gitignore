@@ -10,6 +10,7 @@
 
 # Ignore Firebase service account credentials (VERY IMPORTANT!)
 firebase-adminsdk-*.json
+backend/config/*.json  
 
 # Logs & Debugging
 npm-debug.log*
