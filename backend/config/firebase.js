@@ -1,19 +1,30 @@
 import admin from "firebase-admin";
 import dotenv from "dotenv";
+import fs from "fs";
+import path from "path";
 
-// Load environment variables from .env file
 dotenv.config();
 
-// Import the service account JSON file
-import serviceAccount from "./gitbridge-app-firebase-adminsdk-fbsvc-68075fea2c.json" assert { type: "json" };
+// Define the correct path to the service account JSON file
+const serviceAccountPath = path.resolve(
+  "config/gitbridge-app-firebase-adminsdk-fbsvc-68075fea2c.json"
+);
 
-// Initialize Firebase Admin SDK with the service account
+// Check if the file exists before reading
+if (!fs.existsSync(serviceAccountPath)) {
+  throw new Error(`Service account file not found: ${serviceAccountPath}`);
+}
+
+// Read and parse the JSON file
+const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
+
+// Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
 
-// Export Firebase services to use in other parts of the app
+// Export Firebase Auth and Firestore
 export const auth = admin.auth();
 export const db = admin.firestore();
 
-console.log("Firebase Admin SDK initialized successfully.");
+console.log("✅ Firebase Admin SDK initialized successfully.");
