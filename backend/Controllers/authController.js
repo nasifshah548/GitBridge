@@ -5,12 +5,19 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Decode the base64-encoded Firebase credentials
+const serviceAccountJSON = Buffer.from(
+  process.env.FIREBASE_CREDENTIALS_BASE64,
+  "base64"
+).toString("utf-8");
+
+// Parse JSON from the decoded string
+const serviceAccount = JSON.parse(serviceAccountJSON);
+
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(
-      JSON.parse(process.env.FIREBASE_ADMIN_CREDENTIALS)
-    ),
+    credential: admin.credential.cert(serviceAccount),
   });
 }
 
