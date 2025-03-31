@@ -3,6 +3,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+if (!process.env.FIREBASE_CREDENTIALS_BASE64) {
+  throw new Error("Missing Firebase credentials in environment variables.");
+}
+
 // Decode and parse Firebase credentials from environment variable
 const serviceAccountJSON = Buffer.from(
   process.env.FIREBASE_CREDENTIALS_BASE64,
