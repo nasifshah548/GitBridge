@@ -1,102 +1,105 @@
-// repoController.js
-import admin from "firebase-admin"; // Use default import for firebase-admin
-import { db } from "../config/firebase.js"; // Import Firestore instance
+import admin from "firebase-admin";
+import { db } from "../config/firebase.js";
+import Joi from "joi";
 
-const { firestore } = admin; // Extract firestore from admin
+const { firestore } = admin;
 
-// Function to verify the repo link and user ownership
+// Helper: Validate request payloads
+const validateInput = (schema, data) => {
+  const { error } = schema.validate(data);
+  if (error) throw new Error(error.details[0].message);
+};
+
+// Validate and verify repo ownership
 const verifyRepoOwnership = async (userId, repoUrl) => {
-  // Extract the username and repo name from the URL
   const urlParts = repoUrl.split("/");
-  const platform = urlParts[2]; // github, gitlab, or bitbucket
+  const platform = urlParts[2]; // e.g., github.com
   const username = urlParts[3];
-  const repoName = urlParts[4];
 
-  // Fetch user data from Firebase
   const userRef = db.collection("users").doc(userId);
   const userDoc = await userRef.get();
 
-  if (!userDoc.exists) {
-    throw new Error("User not found!");
-  }
+  if (!userDoc.exists) throw new Error("User not found!");
 
   const userData = userDoc.data();
-  const userGitPlatform = userData.gitPlatform; // github, gitlab, or bitbucket
-  const userGitUsername = userData.gitUsername; // The username the user has linked on that platform
+  const userGitPlatform = userData.gitPlatform;
+  const userGitUsername = userData.gitUsername;
 
-  // Check if the user is authenticated with the same platform as the repo link
-  if (userGitPlatform !== platform || userGitUsername !== username) {
+  if (!userGitPlatform || !userGitUsername) {
+    throw new Error("User has not linked a Git account yet.");
+  }
+
+  if (!platform.includes(userGitPlatform) || userGitUsername !== username) {
     throw new Error("Repo does not belong to the authenticated user!");
   }
 
   return true;
 };
 
-// Function to link the repo to the user's account
+// Link repo
 const linkRepo = async (req, res) => {
-  const { userId, repoUrl } = req.body;
-
   try {
-    // Verify if the user owns the repo
-    const isOwner = await verifyRepoOwnership(userId, repoUrl);
-
-    if (isOwner) {
-      // Store the repo link to the user's account in the database
-      const userRef = db.collection("users").doc(userId);
-      await userRef.update({
-        linkedRepos: firestore.FieldValue.arrayUnion(repoUrl), // Use firestore.FieldValue correctly
-      });
-
-      res.status(200).json({
-        success: true,
-        message: "Repository successfully linked to your account!",
-      });
-    }
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: error.message,
+    const schema = Joi.object({
+      userId: Joi.string().required(),
+      repoUrl: Joi.string().uri().required(),
     });
+
+    validateInput(schema, req.body);
+
+    const { userId, repoUrl } = req.body;
+
+    await verifyRepoOwnership(userId, repoUrl);
+
+    const userRef = db.collection("users").doc(userId);
+    await userRef.update({
+      linkedRepos: firestore.FieldValue.arrayUnion(repoUrl),
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Repository successfully linked to your account!",
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
-// Function to get linked repositories
+// Get linked repos
 const getLinkedRepos = async (req, res) => {
-  const { userId } = req.params;
-
   try {
-    // Fetch the user's data
+    const schema = Joi.object({ userId: Joi.string().required() });
+    validateInput(schema, req.params);
+
+    const { userId } = req.params;
+
     const userRef = db.collection("users").doc(userId);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found!",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!" });
     }
 
     const userData = userDoc.data();
     const linkedRepos = userData.linkedRepos || [];
 
-    res.status(200).json({
-      success: true,
-      linkedRepos,
-    });
+    res.status(200).json({ success: true, linkedRepos });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching linked repos.",
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
-// Function to clone a repository
+// Clone repo (mock)
 const cloneRepo = async (req, res) => {
-  const { repoUrl } = req.body;
-
   try {
-    // Simulating repository cloning process
+    const schema = Joi.object({
+      repoUrl: Joi.string().uri().required(),
+    });
+
+    validateInput(schema, req.body);
+    const { repoUrl } = req.body;
+
     console.log(`Cloning repository: ${repoUrl}`);
 
     res.status(200).json({
@@ -104,22 +107,24 @@ const cloneRepo = async (req, res) => {
       message: "Repository cloned successfully!",
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error cloning repository.",
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
-// Function to delete a repository
+// Delete repo
 const deleteRepo = async (req, res) => {
-  const { userId, repoUrl } = req.body;
-
   try {
-    // Remove the repo link from the user's account in Firestore
+    const schema = Joi.object({
+      userId: Joi.string().required(),
+      repoUrl: Joi.string().uri().required(),
+    });
+
+    validateInput(schema, req.body);
+    const { userId, repoUrl } = req.body;
+
     const userRef = db.collection("users").doc(userId);
     await userRef.update({
-      linkedRepos: firestore.FieldValue.arrayRemove(repoUrl), // Remove repo from array
+      linkedRepos: firestore.FieldValue.arrayRemove(repoUrl),
     });
 
     res.status(200).json({
@@ -127,41 +132,13 @@ const deleteRepo = async (req, res) => {
       message: "Repository deleted successfully!",
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error deleting repository.",
-    });
+    res.status(400).json({ success: false, message: error.message });
   }
 };
 
-// Function to list all linked repositories
+// List repos (same as getLinkedRepos for redundancy)
 const listRepos = async (req, res) => {
-  const { userId } = req.params;
-
-  try {
-    const userRef = db.collection("users").doc(userId);
-    const userDoc = await userRef.get();
-
-    if (!userDoc.exists) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found!",
-      });
-    }
-
-    const userData = userDoc.data();
-    const linkedRepos = userData.linkedRepos || [];
-
-    res.status(200).json({
-      success: true,
-      linkedRepos,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Error fetching repositories.",
-    });
-  }
+  return getLinkedRepos(req, res); // Reuse the same logic
 };
 
 export { linkRepo, getLinkedRepos, cloneRepo, deleteRepo, listRepos };
