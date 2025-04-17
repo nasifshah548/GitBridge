@@ -5,23 +5,44 @@ import {
   mergeBranch,
   addFiles,
   commitChanges,
+  initRepo,
+  cloneRepo,
+  createBranch,
+  switchBranch,
+  listBranches,
+  deleteBranch,
+  stashChanges,
+  resetRepo,
+  checkoutItem,
 } from "../Controllers/gitController.js";
+
+import {
+  createBranch,
+  switchBranch,
+  listBranches,
+  deleteBranch,
+} from "../Controllers/branchController.js";
 
 const router = express.Router();
 
-// Route to push changes to a repository
+// ----- Git Basic Operations -----
 router.post("/push", pushRepo);
-
-// Route to pull changes from a repository
 router.post("/pull", pullRepo);
-
-// Route to merge branches
 router.post("/merge", mergeBranch);
-
-// Route to add files to staging
 router.post("/add", addFiles);
-
-// Route to commit changes
 router.post("/commit", commitChanges);
+router.post("/init", initRepo);
+router.post("/clone", cloneRepo);
+
+// ----- Git Branch Management -----
+router.post("/branch/create", createBranch);
+router.post("/branch/switch", switchBranch);
+router.get("/branch/list", listBranches);
+router.delete("/branch/delete", deleteBranch);
+
+// New Git commands
+router.post("/stash", stashChanges);
+router.post("/reset", resetRepo);
+router.post("/checkout", checkoutItem);
 
 export default router;

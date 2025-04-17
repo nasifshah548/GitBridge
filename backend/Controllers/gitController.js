@@ -10,10 +10,14 @@ if (!fs.existsSync(REPO_BASE_DIR)) {
   fs.mkdirSync(REPO_BASE_DIR, { recursive: true });
 }
 
-// Push changes
+// Utility to get repo path
+const getRepoPath = (userId, repoName) =>
+  path.join(REPO_BASE_DIR, userId, repoName);
+
+// PUSH
 const pushRepo = async (req, res) => {
   const { repoName, branch, commitMessage } = req.body;
-  const user = req.user; // Assuming authentication middleware adds this
+  const user = req.user;
 
   if (!repoName || !branch || !commitMessage) {
     return res.status(400).json({
@@ -21,10 +25,9 @@ const pushRepo = async (req, res) => {
     });
   }
 
-  const repoPath = path.join(REPO_BASE_DIR, user.id, repoName);
-  if (!fs.existsSync(repoPath)) {
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
     return res.status(404).json({ error: "Repository not found" });
-  }
 
   try {
     const git = simpleGit(repoPath);
@@ -37,21 +40,19 @@ const pushRepo = async (req, res) => {
   }
 };
 
-// Pull changes
+// PULL
 const pullRepo = async (req, res) => {
   const { repoName, branch } = req.body;
   const user = req.user;
 
-  if (!repoName || !branch) {
+  if (!repoName || !branch)
     return res
       .status(400)
       .json({ error: "Repository name and branch are required" });
-  }
 
-  const repoPath = path.join(REPO_BASE_DIR, user.id, repoName);
-  if (!fs.existsSync(repoPath)) {
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
     return res.status(404).json({ error: "Repository not found" });
-  }
 
   try {
     const git = simpleGit(repoPath);
@@ -62,7 +63,7 @@ const pullRepo = async (req, res) => {
   }
 };
 
-// Merge branches
+// MERGE
 const mergeBranch = async (req, res) => {
   const { repoName, sourceBranch, targetBranch } = req.body;
   const user = req.user;
@@ -73,10 +74,9 @@ const mergeBranch = async (req, res) => {
     });
   }
 
-  const repoPath = path.join(REPO_BASE_DIR, user.id, repoName);
-  if (!fs.existsSync(repoPath)) {
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
     return res.status(404).json({ error: "Repository not found" });
-  }
 
   try {
     const git = simpleGit(repoPath);
@@ -88,19 +88,17 @@ const mergeBranch = async (req, res) => {
   }
 };
 
-// Add files to staging
+// ADD FILES
 const addFiles = async (req, res) => {
   const { repoName } = req.body;
   const user = req.user;
 
-  if (!repoName) {
+  if (!repoName)
     return res.status(400).json({ error: "Repository name is required" });
-  }
 
-  const repoPath = path.join(REPO_BASE_DIR, user.id, repoName);
-  if (!fs.existsSync(repoPath)) {
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
     return res.status(404).json({ error: "Repository not found" });
-  }
 
   try {
     const git = simpleGit(repoPath);
@@ -111,7 +109,7 @@ const addFiles = async (req, res) => {
   }
 };
 
-// Commit changes
+// COMMIT
 const commitChanges = async (req, res) => {
   const { repoName, commitMessage } = req.body;
   const user = req.user;
@@ -122,10 +120,9 @@ const commitChanges = async (req, res) => {
       .json({ error: "Repository name and commit message are required" });
   }
 
-  const repoPath = path.join(REPO_BASE_DIR, user.id, repoName);
-  if (!fs.existsSync(repoPath)) {
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
     return res.status(404).json({ error: "Repository not found" });
-  }
 
   try {
     const git = simpleGit(repoPath);
@@ -136,4 +133,67 @@ const commitChanges = async (req, res) => {
   }
 };
 
-export { pushRepo, pullRepo, mergeBranch, addFiles, commitChanges };
+// STASH
+const stashChanges = async (req, res) => {
+  const { repoName, message } = req.body;
+  const user = req.user;
+
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
+    return res.status(404).json({ error: "Repository not found" });
+
+  try {
+    const git = simpleGit(repoPath);
+    await git.stash(["push", "-m", message || "Auto stash"]);
+    res.json({ message: `Changes stashed: ${message}` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// RESET
+const resetRepo = async (req, res) => {
+  const { repoName, mode, commitHash } = req.body;
+  const user = req.user;
+
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
+    return res.status(404).json({ error: "Repository not found" });
+
+  try {
+    const git = simpleGit(repoPath);
+    await git.reset([mode || "--soft", commitHash || "HEAD~1"]);
+    res.json({ message: `Repository reset with mode ${mode || "--soft"}` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// CHECKOUT
+const checkoutBranch = async (req, res) => {
+  const { repoName, branch } = req.body;
+  const user = req.user;
+
+  const repoPath = getRepoPath(user.id, repoName);
+  if (!fs.existsSync(repoPath))
+    return res.status(404).json({ error: "Repository not found" });
+
+  try {
+    const git = simpleGit(repoPath);
+    await git.checkout(branch);
+    res.json({ message: `Switched to branch: ${branch}` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export {
+  pushRepo,
+  pullRepo,
+  mergeBranch,
+  addFiles,
+  commitChanges,
+  stashChanges,
+  resetRepo,
+  checkoutBranch,
+};
