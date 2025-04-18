@@ -8,10 +8,10 @@ const axiosInstance = axios.create({
   },
 });
 
-// Optional: Attach Firebase Auth token dynamically if needed
+// Attach Firebase Auth token dynamically if needed
 axiosInstance.interceptors.request.use(
   async (config) => {
-    const user = JSON.parse(localStorage.getItem("firebaseUser")); // Adjust based on your auth flow
+    const user = JSON.parse(localStorage.getItem("firebaseUser"));
     if (user?.token) {
       config.headers.Authorization = `Bearer ${user.token}`;
     }
@@ -61,6 +61,88 @@ export const pushRepository = async () => {
   } catch (error) {
     console.error("Push error:", error);
     throw error.response?.data || { error: "Push failed" };
+  }
+};
+
+// ========== BRANCH OPERATIONS ==========
+
+export const listBranches = async () => {
+  try {
+    const response = await axiosInstance.get("/repos/branches");
+    return response.data;
+  } catch (error) {
+    console.error("List branches error:", error);
+    throw error.response?.data || { error: "Failed to list branches" };
+  }
+};
+
+export const createBranch = async (branchName) => {
+  try {
+    const response = await axiosInstance.post("/repos/branches/create", {
+      branchName,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Create branch error:", error);
+    throw error.response?.data || { error: "Failed to create branch" };
+  }
+};
+
+export const switchBranch = async (branchName) => {
+  try {
+    const response = await axiosInstance.post("/repos/branches/switch", {
+      branchName,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Switch branch error:", error);
+    throw error.response?.data || { error: "Failed to switch branch" };
+  }
+};
+
+export const deleteBranch = async (branchName) => {
+  try {
+    const response = await axiosInstance.post("/repos/branches/delete", {
+      branchName,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Delete branch error:", error);
+    throw error.response?.data || { error: "Failed to delete branch" };
+  }
+};
+
+// ========== ADVANCED GIT ACTIONS ==========
+
+export const stashChanges = async () => {
+  try {
+    const response = await axiosInstance.post("/repos/stash");
+    return response.data;
+  } catch (error) {
+    console.error("Stash error:", error);
+    throw error.response?.data || { error: "Failed to stash changes" };
+  }
+};
+
+export const resetRepo = async () => {
+  try {
+    const response = await axiosInstance.post("/repos/reset");
+    return response.data;
+  } catch (error) {
+    console.error("Reset error:", error);
+    throw error.response?.data || { error: "Failed to reset repository" };
+  }
+};
+
+export const checkoutBranch = async (branchName) => {
+  try {
+    const response = await axiosInstance.post("/repos/checkout", {
+      branchName,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Checkout error:", error);
+    throw error.response?.data || { error: "Failed to checkout branch" };
   }
 };
 

@@ -7,13 +7,9 @@ import {
   commitChanges,
   initRepo,
   cloneRepo,
-  createBranch,
-  switchBranch,
-  listBranches,
-  deleteBranch,
   stashChanges,
   resetRepo,
-  checkoutItem,
+  checkoutBranch,
 } from "../Controllers/gitController.js";
 
 import {
@@ -34,15 +30,15 @@ router.post("/commit", commitChanges);
 router.post("/init", initRepo);
 router.post("/clone", cloneRepo);
 
-// ----- Git Branch Management -----
+// ----- Git Branch Management (From branchController) -----
+router.get("/branch/list", listBranches);
 router.post("/branch/create", createBranch);
 router.post("/branch/switch", switchBranch);
-router.get("/branch/list", listBranches);
 router.delete("/branch/delete", deleteBranch);
 
-// New Git commands
+// ----- Additional Git Actions -----
 router.post("/stash", stashChanges);
 router.post("/reset", resetRepo);
-router.post("/checkout", checkoutItem);
+router.post("/checkout", checkoutBranch);
 
 export default router;
